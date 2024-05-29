@@ -6,10 +6,12 @@ from django.db import IntegrityError
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
 from .models import Task
-
+from cryptography.fernet import Fernet
+from django.conf import settings
 from .forms import TaskForm
+from django.http import HttpResponseForbidden
 
-# Create your views here.
+f = Fernet(settings.ECRYPTED_KEY)
 
 
 def signup(request):
@@ -30,8 +32,13 @@ def signup(request):
         return render(request, 'signup.html', {"form": UserCreationForm, "error": "Passwords did not match."})
 
 
-@login_required
+
 def tasks(request):
+    if not request.user.is_authenticated:
+        # Si el usuario no está autenticado, devuelve un mensaje de error 403
+        return render (request, 'intruso.html')
+    
+    # Si el usuario está autenticado, obtén las tareas y renderiza la página normalmente
     tasks = Task.objects.filter(user=request.user, datecompleted__isnull=True)
     return render(request, 'tasks.html', {"tasks": tasks})
 
@@ -49,6 +56,25 @@ def create_task(request):
         try:
             form = TaskForm(request.POST)
             new_task = form.save(commit=False)
+            
+            #encrypting the task
+            orginal_task_description = form.cleaned_data['description']
+            orginal_task_description_bytes = orginal_task_description.encode('utf-8')
+            encrypted_task_description = f.encrypt(orginal_task_description_bytes)
+            decoded_task_description = encrypted_task_description.decode('utf-8')
+            new_task.description = decoded_task_description
+            
+            print('Original task description:', orginal_task_description)
+            print('Original task description bytes:', orginal_task_description_bytes)
+            print('Encrypted task description:', encrypted_task_description)
+            
+            decrypted_task_description = f.decrypt(encrypted_task_description)
+            decoded_task_description = decrypted_task_description.decode('utf-8')
+            
+            print('Decrypted task description:', decrypted_task_description)
+            print('Decoded task description:', decoded_task_description)
+            
+            
             new_task.user = request.user
             new_task.save()
             return redirect('tasks')

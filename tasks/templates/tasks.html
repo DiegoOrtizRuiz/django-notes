@@ -1,6 +1,6 @@
 {% extends 'base.html' %} {% block content %}
 
-<h1>tasks</h1>
+<h1>Solicitudes a mi cargo</h1>
 
 <ul>
   {% for task in tasks %}
@@ -9,7 +9,7 @@
       {% if task.important %}
       <strong>{{task.title}}</strong>
       {% else %} {{task.id}} {{task.title}} {% endif %}
-      <p>{{task.description}}</p>
+      <p>{{task.description_decrypted}}</p>
 
       {{task.datecompleted|date:'M j Y:i'}}
     </a>
